@@ -7,11 +7,15 @@ from tqdm import tqdm
 from argparse import ArgumentParser
 
 
-def map_satellite_data(ds_path: str, csv_path: str, train: bool = True):
+def map_satellite_data(ds_path: str, csv_path: str, train: bool = True) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
 
     # Open the GeoTIFF file and load data into xarray DataArrays
     ds = xr.open_dataset(ds_path)
+
+    ds = ds.median(
+        dim="time"
+    )  # TODO: Make sure to find better typical values by looking at values over a longer period of time
 
     rows = []
 
@@ -31,7 +35,7 @@ def map_satellite_data(ds_path: str, csv_path: str, train: bool = True):
         for var in vars:
             try:
                 row_entries[var] = (
-                    ds[var].sel(lat=target_lat, lon=target_lon, method="nearest").values
+                    ds[var].sel(lat=target_lat, lon=target_lon, method="nearest").values.item()
                 )
             except:
                 row_entries[var] = np.nan
