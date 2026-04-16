@@ -28,7 +28,7 @@ def map_satellite_data(ds_path: str, csv_path: str, train: bool = True) -> pd.Da
         row_entries = {"latitude": target_lat, "longitude": target_lon}
 
         if train:
-            row["Occurrence Status"] = df["Occurrence Status"]
+            row_entries["Occurrence Status"] = row["Occurrence Status"]
 
         vars = list(ds.data_vars)
 
