@@ -15,7 +15,9 @@ def sanitize_attrs(attrs):
     return clean
 
 
-def download_terraclimate_dataset(output_path):
+def download_terraclimate_dataset(
+    output_path, time_start: str | None = None, time_end: str | None = None
+):
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1",
         modifier=pc.sign_inplace,
@@ -33,7 +35,9 @@ def download_terraclimate_dataset(output_path):
 
     min_lon, max_lon = 139.94, 151.48
     min_lat, max_lat = -39.74, -30.92
-    time_slice = slice("2017-11-01", "2019-11-01")
+
+    ## setting up time slice
+    time_slice = slice(time_start, time_end)
 
     # First open just to get variable names
     print("Fetching dataset metadata...")
@@ -84,11 +88,34 @@ def download_terraclimate_dataset(output_path):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--output_path", type=str, required=True, help="Output path for NetCDF file")
+    parser.add_argument(
+        "--output-path", type=str, required=True, help="Output path for NetCDF file"
+    )
+    parser.add_argument(
+        "--time-start", type=str, default=None, help="Start time for time slice"
+    )
+    parser.add_argument(
+        "--time-end", type=str, default=None, help="End time for time slice"
+    )
+    parser.add_argument(
+        "--sample-time-range", action="store_true", help="Download all variables"
+    )
+
     args = parser.parse_args()
 
     dir_name = os.path.dirname(args.output_path)
     if dir_name and not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
-    download_terraclimate_dataset(output_path=args.output_path)
+    if args.sample_time_range:
+        download_terraclimate_dataset(
+            output_path=args.output_path,
+            time_start="2017-11-01",
+            time_end="2019-11-01",
+        )
+    else:
+        download_terraclimate_dataset(
+            output_path=args.output_path,
+            time_start=args.time_start,
+            time_end=args.time_end,
+        )
