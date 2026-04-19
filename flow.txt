@@ -1,0 +1,2 @@
+* Stick to simple model like logistic regression (study the effect of each feature and interactions on the model's performance)
+* once we've found best features and interactions, we can stop worrying about the model and try other models
