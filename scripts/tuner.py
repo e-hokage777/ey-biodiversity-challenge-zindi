@@ -36,6 +36,7 @@ from sklearn.ensemble import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, StratifiedKFold
+from xgboost import XGBClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler
@@ -76,6 +77,7 @@ ModelName: TypeAlias = Literal[
     "decision_tree",
     "random_forest",
     "gradient_boosting",
+    "xgboost",
     "svc",
     "knn",
 ]
@@ -129,6 +131,7 @@ def _build_model(trial: optuna.Trial) -> tuple[ModelName, Classifier]:
             "decision_tree",
             "random_forest",
             "gradient_boosting",
+            "xgboost",
             "svc",
             "knn",
         ],
@@ -192,6 +195,24 @@ def _build_model(trial: optuna.Trial) -> tuple[ModelName, Classifier]:
             subsample=subsample,
             min_samples_split=min_samples_split,
             random_state=42,
+        )
+
+    elif model_name == "xgboost":
+        n_estimators = trial.suggest_int("xgb__n_estimators", 50, 500)
+        max_depth = trial.suggest_int("xgb__max_depth", 2, 10)
+        learning_rate: float = trial.suggest_float(
+            "xgb__learning_rate", 0.01, 0.5, log=True
+        )
+        subsample: float = trial.suggest_float("xgb__subsample", 0.5, 1.0)
+        colsample_bytree: float = trial.suggest_float("xgb__colsample_bytree", 0.5, 1.0)
+        model = XGBClassifier(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=learning_rate,
+            subsample=subsample,
+            colsample_bytree=colsample_bytree,
+            random_state=42,
+            n_jobs=-1,
         )
 
     elif model_name == "svc":
@@ -495,6 +516,17 @@ class ClassificationTuner:
                 random_state=42,
             )
 
+        if mn == "xgboost":
+            return mn, XGBClassifier(
+                n_estimators=int(params["xgb__n_estimators"]),
+                max_depth=int(params["xgb__max_depth"]),
+                learning_rate=float(params["xgb__learning_rate"]),
+                subsample=float(params["xgb__subsample"]),
+                colsample_bytree=float(params["xgb__colsample_bytree"]),
+                random_state=42,
+                n_jobs=-1,
+            )
+
         if mn == "svc":
             kernel: Literal["linear", "rbf", "poly"] = params["svc__kernel"]
             svc_kwargs: dict[str, Any] = {
@@ -620,6 +652,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True, help="Path to csv file")
     parser.add_argument("--study-name", type=str, required=True, help="The name of the tuning study")
+    parser.add_argument("--n-trials", type=int, default=100, help="Number of trials to run")
     args = parser.parse_args()
 
     df = pd.read_csv(args.dataset).dropna(
@@ -637,7 +670,7 @@ if __name__ == "__main__":
     X_train, y_train = clean_training_data(X_train, y_train) ## removing duplicates and such
 
     tuner: ClassificationTuner = ClassificationTuner(
-        n_trials=100,
+        n_trials=args.n_trials,
         cv=5,
         scoring="f1",
         verbose=True,
