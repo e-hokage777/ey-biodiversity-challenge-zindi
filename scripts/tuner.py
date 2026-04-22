@@ -35,7 +35,7 @@ from sklearn.ensemble import (
     RandomForestClassifier,
 )
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MaxAbsScaler, StandardScaler
@@ -410,7 +410,7 @@ class ClassificationTuner:
         self.study_.optimize(
             self._objective,
             n_trials=self.n_trials,
-            show_progress_bar=False,
+            show_progress_bar=True,
         )
 
         best: optuna.trial.FrozenTrial = self.study_.best_trial
@@ -600,6 +600,14 @@ class ClassificationTuner:
                 best[mn] = min(best[mn], score)
 
         return dict(sorted(best.items(), key=lambda x: x[1], reverse=reverse))
+    
+
+
+def clean_training_data(X_train, y_train):
+    duplicated_indices = X_train.duplicated()
+    Xt = X_train[~duplicated_indices]
+    yt = y_train[~duplicated_indices]
+    return Xt, yt
 
 
 # ---------------------------------------------------------------------------
@@ -611,25 +619,29 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("--dataset", type=str, required=True, help="Path to csv file")
+    parser.add_argument("--study-name", type=str, required=True, help="The name of the tuning study")
     args = parser.parse_args()
 
     df = pd.read_csv(args.dataset).dropna(
         axis=0
     )  ## TODO: make sure to make this part of the pipeline (imputation)
-    X_all: NDArray[np.float64] = df.drop(
+    X_all: pd.DataFrame = df.drop(
         ["latitude", "longitude", "Occurrence Status"], axis=1
-    ).values
-    y_all: NDArray[np.float64] = df["Occurrence Status"].values
+    )
+    y_all: pd.DataFrame = df["Occurrence Status"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X_all, y_all, test_size=0.2, random_state=42
+        X_all, y_all, test_size=0.2, random_state=42, stratify=y_all
     )
+
+    X_train, y_train = clean_training_data(X_train, y_train) ## removing duplicates and such
 
     tuner: ClassificationTuner = ClassificationTuner(
         n_trials=100,
         cv=5,
         scoring="f1",
         verbose=True,
+        study_name=args.study_name,
     )
     tuner.fit(X_train, y_train)
 
