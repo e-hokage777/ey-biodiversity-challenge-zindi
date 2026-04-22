@@ -46,6 +46,8 @@ from sklearn.metrics import f1_score
 from argparse import ArgumentParser
 import pandas as pd
 
+from utils import clean_training_data
+
 import optuna
 
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -345,6 +347,7 @@ class ClassificationTuner:
         cv: int = 5,
         scoring: str = "f1_macro",
         direction: Direction | None = None,
+        storage: str | None = None,
         study_name: str | None = None,
         random_state: int = 42,
         verbose: bool = True,
@@ -354,6 +357,7 @@ class ClassificationTuner:
         self.scoring: str = scoring
         self.random_state: int = random_state
         self.verbose: bool = verbose
+        self.storage = storage
         self.study_name: str = study_name or "classification_tuning"
 
         # Auto-infer direction
@@ -422,17 +426,19 @@ class ClassificationTuner:
             seed=self.random_state
         )
         self.study_ = optuna.create_study(
-            storage="sqlite:///tuning/classification_tuning.db",
+            storage= self.storage or "sqlite:///tuning/classification_tuning.db",
             study_name=self.study_name,
             direction=self.direction,
             sampler=sampler,
             load_if_exists=True,
         )
-        self.study_.optimize(
-            self._objective,
-            n_trials=self.n_trials,
-            show_progress_bar=True,
-        )
+
+        if self.n_trials > 0:
+            self.study_.optimize(
+                self._objective,
+                n_trials=self.n_trials,
+                show_progress_bar=True,
+            )
 
         best: optuna.trial.FrozenTrial = self.study_.best_trial
         self.best_params_ = best.params
@@ -452,10 +458,7 @@ class ClassificationTuner:
 
         return self
 
-    # ------------------------------------------------------------------
-    # Pipeline reconstruction from stored params
-    # ------------------------------------------------------------------
-
+    
     @staticmethod
     def _build_from_params(params: ParamsDict, n_features: int) -> list[PipelineStep]:
         """Reconstruct preprocessing steps from a completed trial's params dict."""
@@ -633,13 +636,6 @@ class ClassificationTuner:
 
         return dict(sorted(best.items(), key=lambda x: x[1], reverse=reverse))
     
-
-
-def clean_training_data(X_train, y_train):
-    duplicated_indices = X_train.duplicated()
-    Xt = X_train[~duplicated_indices]
-    yt = y_train[~duplicated_indices]
-    return Xt, yt
 
 
 # ---------------------------------------------------------------------------
