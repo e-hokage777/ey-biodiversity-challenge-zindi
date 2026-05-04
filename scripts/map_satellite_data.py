@@ -5,17 +5,19 @@ import numpy as np
 import xarray as xr
 from tqdm import tqdm
 from argparse import ArgumentParser
+from averaging_out import reduce_array
 
 
-def map_satellite_data(ds_path: str, csv_path: str, train: bool = True) -> pd.DataFrame:
+def map_satellite_data(ds_path: str, csv_path: str, test: bool = False) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
 
     # Open the GeoTIFF file and load data into xarray DataArrays
-    ds = xr.open_dataset(ds_path)
+    ds = xr.open_dataset(ds_path, engine="netcdf4")
 
-    ds = ds.median(
-        dim="time"
-    )  # TODO: Make sure to find better typical values by looking at values over a longer period of time
+    # ds = ds.median(
+    #     dim="time"
+    # )  # TODO: Make sure to find better typical values by looking at values over a longer period of time
+    ds = reduce_array(ds)
 
     rows = []
 
@@ -27,7 +29,7 @@ def map_satellite_data(ds_path: str, csv_path: str, train: bool = True) -> pd.Da
 
         row_entries = {"latitude": target_lat, "longitude": target_lon}
 
-        if train:
+        if not test:
             row_entries["Occurrence Status"] = row["Occurrence Status"]
 
         vars = list(ds.data_vars)
@@ -35,7 +37,9 @@ def map_satellite_data(ds_path: str, csv_path: str, train: bool = True) -> pd.Da
         for var in vars:
             try:
                 row_entries[var] = (
-                    ds[var].sel(lat=target_lat, lon=target_lon, method="nearest").values.item()
+                    ds[var]
+                    .sel(lat=target_lat, lon=target_lon, method="nearest")
+                    .values.item()
                 )
             except:
                 row_entries[var] = np.nan
@@ -57,10 +61,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset-path", type=str, required=True, help="Path to GeoTIFF file"
     )
-    parser.add_argument("--train", action="store_true", help="Train mode")
+    parser.add_argument("--test", action="store_true", help="Test mode")
 
     args = parser.parse_args()
 
-    df = map_satellite_data(args.dataset_path, args.csv_path, args.train)
+    df = map_satellite_data(args.dataset_path, args.csv_path, args.test)
 
     df.to_csv(args.output_path, index=False)
