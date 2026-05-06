@@ -1,0 +1,57 @@
+nohup: ignoring input
+Fetching dataset metadata...
+Found 14 variables: ['aet', 'def', 'pdsi', 'pet', 'ppt', 'q', 'soil', 'srad', 'swe', 'tmax', 'tmin', 'vap', 'vpd', 'ws']
+[1/14] Downloading variable: aet
+  ✓ aet loaded successfully
+[2/14] Downloading variable: def
+  ✓ def loaded successfully
+[3/14] Downloading variable: pdsi
+Incomplete download.
+  ✗ Failed to download pdsi: Timeout on reading data from socket. Skipping.
+[4/14] Downloading variable: pet
+  ✓ pet loaded successfully
+[5/14] Downloading variable: ppt
+  ✓ ppt loaded successfully
+[6/14] Downloading variable: q
+  ✓ q loaded successfully
+[7/14] Downloading variable: soil
+  ✓ soil loaded successfully
+[8/14] Downloading variable: srad
+  ✓ srad loaded successfully
+[9/14] Downloading variable: swe
+Incomplete download.
+  ✓ swe loaded successfully
+[10/14] Downloading variable: tmax
+  ✓ tmax loaded successfully
+[11/14] Downloading variable: tmin
+  ✓ tmin loaded successfully
+[12/14] Downloading variable: vap
+  ✓ vap loaded successfully
+[13/14] Downloading variable: vpd
+  ✓ vpd loaded successfully
+[14/14] Downloading variable: ws
+  ✓ ws loaded successfully
+
+Merging 13 variables...
+Saving to data/geo/terraclimate-all.nc...
+Done.
+Traceback (most recent call last):
+  File "/home/eli/.pyenv/versions/3.13.12/lib/python3.13/weakref.py", line 666, in _exitfunc
+    f()
+    ~^^
+  File "/home/eli/.pyenv/versions/3.13.12/lib/python3.13/weakref.py", line 590, in __call__
+    return info.func(*info.args, **(info.kwargs or {}))
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eli/.cache/pypoetry/virtualenvs/ey-biodiversity-challenge--32OnHPk-py3.13/lib/python3.13/site-packages/fsspec/asyn.py", line 76, in sync
+    raise RuntimeError("Loop is not running")
+RuntimeError: Loop is not running
+Traceback (most recent call last):
+  File "/home/eli/.pyenv/versions/3.13.12/lib/python3.13/weakref.py", line 666, in _exitfunc
+    f()
+    ~^^
+  File "/home/eli/.pyenv/versions/3.13.12/lib/python3.13/weakref.py", line 590, in __call__
+    return info.func(*info.args, **(info.kwargs or {}))
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eli/.cache/pypoetry/virtualenvs/ey-biodiversity-challenge--32OnHPk-py3.13/lib/python3.13/site-packages/fsspec/asyn.py", line 76, in sync
+    raise RuntimeError("Loop is not running")
+RuntimeError: Loop is not running
