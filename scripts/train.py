@@ -5,10 +5,11 @@ from sklearn.preprocessing import MinMaxScaler, PolynomialFeatures
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, TunedThresholdClassifierCV
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
 import matplotlib.pyplot as plt
 import os
+from xgboost import XGBClassifier
 
 from argparse import ArgumentParser
 from glob import glob
@@ -34,14 +35,17 @@ def parse_args():
 
 def get_training_data(args):
     df = pd.read_csv(args.train_path)
-    df = clean_training_data(df)
     X = df.drop(["latitude", "longitude", "Occurrence Status"], axis=1)
     y = df["Occurrence Status"]
+
+
     return X, y
 
 
-def clean_training_data(df):
-    return df.drop_duplicates(subset=set(df.columns) - {"latitude", "longitude"})
+# def clean_training_data(df):
+#     return df.drop_duplicates(subset=set(df.columns) - {"latitude", "longitude"})
+
+
 
 
 def create_pipeline(X, y, args: TrainingArgs):
@@ -72,7 +76,8 @@ def create_pipeline(X, y, args: TrainingArgs):
     )
 
     # Define the Logistic Regression model
-    model = LogisticRegression(max_iter=10000, random_state=42, C=100)
+    model = LogisticRegression(max_iter=10000, random_state=42)
+    # model = XGBClassifier(n_estimators=64, max_depth=3, random_state=42)
 
     # Create the full pipeline
     pipeline = Pipeline([("preprocessing", preprocessor), ("classifier", model)])
@@ -99,6 +104,12 @@ def get_save_path():
 
     return save_path
 
+def clean_training_data(X_train, y_train):
+    duplicated_indices = X_train.duplicated()
+    Xt = X_train[~duplicated_indices]
+    yt = y_train[~duplicated_indices]
+    return Xt, yt
+
 
 def train(args: TrainingArgs):
     X, y = get_training_data(args)
@@ -106,15 +117,20 @@ def train(args: TrainingArgs):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, random_state=42, stratify=y, test_size=0.3
     )
+    X_train, y_train = clean_training_data(X_train, y_train)
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
 
-    ## computing f1_score
-    scores = cross_val_score(
-        pipeline, X, y, cv=StratifiedKFold(n_splits=3, random_state=42, shuffle=True), scoring="f1_macro", n_jobs=-1
-    )
+    pipeline = TunedThresholdClassifierCV(pipeline, cv="prefit", refit=False, scoring="f1_macro").fit(X_test, y_test)
 
-    print("f1_score",np.mean(scores))
+    ## finding best threshold
+
+    ## computing f1_score
+    # scores = cross_val_score(
+    #     pipeline, X, y, cv=StratifiedKFold(n_splits=3, random_state=42, shuffle=True), scoring="f1_macro", n_jobs=-1
+    # )
+
+    # print("f1_score",np.mean(scores))
 
     evaluations(X_train, y_train, X_test, y_test, pipeline)
     return pipeline

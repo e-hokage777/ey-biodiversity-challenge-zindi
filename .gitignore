@@ -3,3 +3,4 @@ other/
 __pycache__/
 .python-version
 train_logs
+submissions
