@@ -8,6 +8,12 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 import os
 
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler, PolynomialFeatures
+from argument_parse import TrainingArgs
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+
 
 def split_dataset(X, y, test_size=0.3, random_state=42):
     X_train, X_test, y_train, y_test = train_test_split(
@@ -73,3 +79,41 @@ def make_submission(path: str, model, save_path: str):
     predictions = model.predict(X)
     sub = pd.DataFrame({"ID": ids, "Occurrence Status": predictions})
     sub.to_csv(save_path, index=False)
+
+
+
+
+def create_pipeline(X, y, model, args: TrainingArgs):
+    num_features = X.select_dtypes("number").columns
+
+    # Define preprocessing steps
+    transformer = Pipeline(
+        [
+            (
+                "imputer",
+                SimpleImputer(strategy="median"),
+            ),
+            # Scale numerical features
+        ]
+    )
+
+    if args.poly:
+        transformer.steps.append(("poly", PolynomialFeatures(degree=args.poly)))
+
+    transformer.steps.append(("scaler", MinMaxScaler()))
+
+    # Combine transformers using ColumnTransformer
+    preprocessor = ColumnTransformer(
+        [
+            ("num", transformer, num_features),
+        ],
+        remainder="drop",
+    )
+
+    # Define the Logistic Regression model
+    # model = XGBClassifier(n_estimators=64, max_depth=3, random_state=42)
+
+    # Create the full pipeline
+    pipeline = Pipeline([("preprocessing", preprocessor), ("classifier", model)])
+
+    return pipeline
